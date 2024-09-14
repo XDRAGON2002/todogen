@@ -7,11 +7,17 @@ WHERE id = ?;
 
 -- name: AddTodo :one
 INSERT INTO todos (
-    id
+    id, title, isCompleted
 ) VALUES (
-    NULL
+    NULL, ?, ?
 )
 RETURNING *; 
+
+-- name: UpdateTodoById :one
+UPDATE todos
+SET title = ?, isCompleted = ?
+WHERE id = ?
+RETURNING *;
 
 -- name: DeleteTodoById :exec
 DELETE FROM todos

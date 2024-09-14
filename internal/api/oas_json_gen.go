@@ -3,41 +3,81 @@
 package api
 
 import (
+	"math/bits"
+	"strconv"
+
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+
+	"github.com/ogen-go/ogen/validate"
 )
 
-// Encode encodes int as json.
-func (o OptInt) Encode(e *jx.Encoder) {
+// Encode encodes bool as json.
+func (o OptBool) Encode(e *jx.Encoder) {
 	if !o.Set {
 		return
 	}
-	e.Int(int(o.Value))
+	e.Bool(bool(o.Value))
 }
 
-// Decode decodes int from json.
-func (o *OptInt) Decode(d *jx.Decoder) error {
+// Decode decodes bool from json.
+func (o *OptBool) Decode(d *jx.Decoder) error {
 	if o == nil {
-		return errors.New("invalid: unable to decode OptInt to nil")
+		return errors.New("invalid: unable to decode OptBool to nil")
 	}
 	o.Set = true
-	v, err := d.Int()
+	v, err := d.Bool()
 	if err != nil {
 		return err
 	}
-	o.Value = int(v)
+	o.Value = bool(v)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s OptInt) MarshalJSON() ([]byte, error) {
+func (s OptBool) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptInt) UnmarshalJSON(data []byte) error {
+func (s *OptBool) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes int64 as json.
+func (o OptInt64) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Int64(int64(o.Value))
+}
+
+// Decode decodes int64 from json.
+func (o *OptInt64) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptInt64 to nil")
+	}
+	o.Set = true
+	v, err := d.Int64()
+	if err != nil {
+		return err
+	}
+	o.Value = int64(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptInt64) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptInt64) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -57,10 +97,22 @@ func (s *Todo) encodeFields(e *jx.Encoder) {
 			s.ID.Encode(e)
 		}
 	}
+	{
+		e.FieldStart("title")
+		e.Str(s.Title)
+	}
+	{
+		if s.IsCompleted.Set {
+			e.FieldStart("isCompleted")
+			s.IsCompleted.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfTodo = [1]string{
+var jsonFieldsNameOfTodo = [3]string{
 	0: "id",
+	1: "title",
+	2: "isCompleted",
 }
 
 // Decode decodes Todo from json.
@@ -68,6 +120,7 @@ func (s *Todo) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode Todo to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -81,12 +134,66 @@ func (s *Todo) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
+		case "title":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Title = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"title\"")
+			}
+		case "isCompleted":
+			if err := func() error {
+				s.IsCompleted.Reset()
+				if err := s.IsCompleted.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"isCompleted\"")
+			}
 		default:
 			return d.Skip()
 		}
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode Todo")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000010,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfTodo) {
+					name = jsonFieldsNameOfTodo[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil

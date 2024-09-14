@@ -26,7 +26,9 @@ func (t *todosService) GetTodos(ctx context.Context) ([]api.Todo, error) {
 	var todos []api.Todo
 	for _, item := range items {
 		todos = append(todos, api.Todo{
-			ID: api.NewOptInt(int(item)),
+			ID:          api.NewOptInt64(item.ID),
+			Title:       item.Title,
+			IsCompleted: api.NewOptBool(bool(item.Iscompleted != 0)),
 		})
 	}
 
@@ -40,18 +42,52 @@ func (t *todosService) GetTodoById(ctx context.Context, params api.GetTodoByIdPa
 	}
 
 	return &api.Todo{
-		ID: api.NewOptInt(int(item)),
+		ID:          api.NewOptInt64(item.ID),
+		Title:       item.Title,
+		IsCompleted: api.NewOptBool(bool(item.Iscompleted != 0)),
 	}, nil
 }
 
 func (t *todosService) AddTodo(ctx context.Context, req *api.Todo) (*api.Todo, error) {
-	item, err := t.queries.AddTodo(context.Background())
+	isCompleted := 0
+	if req.GetIsCompleted().Value {
+		isCompleted = 1
+	}
+
+	item, err := t.queries.AddTodo(context.Background(), db.AddTodoParams{
+		Title:       req.Title,
+		Iscompleted: int64(isCompleted),
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.Todo{
-		ID: api.NewOptInt(int(item)),
+		ID:          api.NewOptInt64(item.ID),
+		Title:       item.Title,
+		IsCompleted: api.NewOptBool(bool(item.Iscompleted != 0)),
+	}, nil
+}
+
+func (t *todosService) UpdateTodoById(ctx context.Context, req *api.Todo, params api.UpdateTodoByIdParams) (*api.Todo, error) {
+	isCompleted := 0
+	if req.GetIsCompleted().Value {
+		isCompleted = 1
+	}
+
+	item, err := t.queries.UpdateTodoById(context.Background(), db.UpdateTodoByIdParams{
+		Title:       req.Title,
+		Iscompleted: int64(isCompleted),
+		ID:          params.TodoId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.Todo{
+		ID:          api.NewOptInt64(item.ID),
+		Title:       item.Title,
+		IsCompleted: api.NewOptBool(bool(item.Iscompleted != 0)),
 	}, nil
 }
 

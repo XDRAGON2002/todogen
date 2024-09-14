@@ -11,18 +11,23 @@ import (
 
 const addTodo = `-- name: AddTodo :one
 INSERT INTO todos (
-    id
+    id, title, isCompleted
 ) VALUES (
-    NULL
+    NULL, ?, ?
 )
-RETURNING id
+RETURNING id, title, iscompleted
 `
 
-func (q *Queries) AddTodo(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addTodo)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+type AddTodoParams struct {
+	Title       string
+	Iscompleted int64
+}
+
+func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, addTodo, arg.Title, arg.Iscompleted)
+	var i Todo
+	err := row.Scan(&i.ID, &i.Title, &i.Iscompleted)
+	return i, err
 }
 
 const deleteTodoById = `-- name: DeleteTodoById :exec
@@ -36,33 +41,34 @@ func (q *Queries) DeleteTodoById(ctx context.Context, id int64) error {
 }
 
 const getTodoById = `-- name: GetTodoById :one
-SELECT id FROM todos
+SELECT id, title, iscompleted FROM todos
 WHERE id = ?
 `
 
-func (q *Queries) GetTodoById(ctx context.Context, id int64) (int64, error) {
+func (q *Queries) GetTodoById(ctx context.Context, id int64) (Todo, error) {
 	row := q.db.QueryRowContext(ctx, getTodoById, id)
-	err := row.Scan(&id)
-	return id, err
+	var i Todo
+	err := row.Scan(&i.ID, &i.Title, &i.Iscompleted)
+	return i, err
 }
 
 const getTodos = `-- name: GetTodos :many
-SELECT id FROM todos
+SELECT id, title, iscompleted FROM todos
 `
 
-func (q *Queries) GetTodos(ctx context.Context) ([]int64, error) {
+func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 	rows, err := q.db.QueryContext(ctx, getTodos)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []int64
+	var items []Todo
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
+		var i Todo
+		if err := rows.Scan(&i.ID, &i.Title, &i.Iscompleted); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -71,4 +77,24 @@ func (q *Queries) GetTodos(ctx context.Context) ([]int64, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTodoById = `-- name: UpdateTodoById :one
+UPDATE todos
+SET title = ?, isCompleted = ?
+WHERE id = ?
+RETURNING id, title, iscompleted
+`
+
+type UpdateTodoByIdParams struct {
+	Title       string
+	Iscompleted int64
+	ID          int64
+}
+
+func (q *Queries) UpdateTodoById(ctx context.Context, arg UpdateTodoByIdParams) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoById, arg.Title, arg.Iscompleted, arg.ID)
+	var i Todo
+	err := row.Scan(&i.ID, &i.Title, &i.Iscompleted)
+	return i, err
 }

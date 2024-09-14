@@ -48,3 +48,12 @@ func (UnimplementedHandler) GetTodoById(ctx context.Context, params GetTodoByIdP
 func (UnimplementedHandler) GetTodos(ctx context.Context) (r []Todo, _ error) {
 	return r, ht.ErrNotImplemented
 }
+
+// UpdateTodoById implements updateTodoById operation.
+//
+// Updates a single todo.
+//
+// PUT /todos/{todoId}
+func (UnimplementedHandler) UpdateTodoById(ctx context.Context, req *Todo, params UpdateTodoByIdParams) (r *Todo, _ error) {
+	return r, ht.ErrNotImplemented
+}

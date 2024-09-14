@@ -5,5 +5,7 @@
 package db
 
 type Todo struct {
-	ID int64
+	ID          int64
+	Title       string
+	Iscompleted int64
 }

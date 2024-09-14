@@ -47,6 +47,12 @@ type Invoker interface {
 	//
 	// GET /todos
 	GetTodos(ctx context.Context) ([]Todo, error)
+	// UpdateTodoById invokes updateTodoById operation.
+	//
+	// Updates a single todo.
+	//
+	// PUT /todos/{todoId}
+	UpdateTodoById(ctx context.Context, request *Todo, params UpdateTodoByIdParams) (*Todo, error)
 }
 
 // Client implements OAS client.
@@ -417,6 +423,99 @@ func (c *Client) sendGetTodos(ctx context.Context) (res []Todo, err error) {
 
 	stage = "DecodeResponse"
 	result, err := decodeGetTodosResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateTodoById invokes updateTodoById operation.
+//
+// Updates a single todo.
+//
+// PUT /todos/{todoId}
+func (c *Client) UpdateTodoById(ctx context.Context, request *Todo, params UpdateTodoByIdParams) (*Todo, error) {
+	res, err := c.sendUpdateTodoById(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateTodoById(ctx context.Context, request *Todo, params UpdateTodoByIdParams) (res *Todo, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateTodoById"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/todos/{todoId}"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateTodoById",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/todos/"
+	{
+		// Encode "todoId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "todoId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.Int64ToString(params.TodoId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateTodoByIdRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateTodoByIdResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -10,38 +10,38 @@ type GetTodoByIdNotFound struct{}
 
 func (*GetTodoByIdNotFound) getTodoByIdRes() {}
 
-// NewOptInt returns new OptInt with value set to v.
-func NewOptInt(v int) OptInt {
-	return OptInt{
+// NewOptBool returns new OptBool with value set to v.
+func NewOptBool(v bool) OptBool {
+	return OptBool{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptInt is optional int.
-type OptInt struct {
-	Value int
+// OptBool is optional bool.
+type OptBool struct {
+	Value bool
 	Set   bool
 }
 
-// IsSet returns true if OptInt was set.
-func (o OptInt) IsSet() bool { return o.Set }
+// IsSet returns true if OptBool was set.
+func (o OptBool) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptInt) Reset() {
-	var v int
+func (o *OptBool) Reset() {
+	var v bool
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptInt) SetTo(v int) {
+func (o *OptBool) SetTo(v bool) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptInt) Get() (v int, ok bool) {
+func (o OptBool) Get() (v bool, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -49,7 +49,53 @@ func (o OptInt) Get() (v int, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptInt) Or(d int) int {
+func (o OptBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptInt64 returns new OptInt64 with value set to v.
+func NewOptInt64(v int64) OptInt64 {
+	return OptInt64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInt64 is optional int64.
+type OptInt64 struct {
+	Value int64
+	Set   bool
+}
+
+// IsSet returns true if OptInt64 was set.
+func (o OptInt64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt64) Reset() {
+	var v int64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt64) SetTo(v int64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt64) Get() (v int64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt64) Or(d int64) int64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -58,17 +104,39 @@ func (o OptInt) Or(d int) int {
 
 // Ref: #/components/schemas/Todo
 type Todo struct {
-	ID OptInt `json:"id"`
+	ID          OptInt64 `json:"id"`
+	Title       string   `json:"title"`
+	IsCompleted OptBool  `json:"isCompleted"`
 }
 
 // GetID returns the value of ID.
-func (s *Todo) GetID() OptInt {
+func (s *Todo) GetID() OptInt64 {
 	return s.ID
 }
 
+// GetTitle returns the value of Title.
+func (s *Todo) GetTitle() string {
+	return s.Title
+}
+
+// GetIsCompleted returns the value of IsCompleted.
+func (s *Todo) GetIsCompleted() OptBool {
+	return s.IsCompleted
+}
+
 // SetID sets the value of ID.
-func (s *Todo) SetID(val OptInt) {
+func (s *Todo) SetID(val OptInt64) {
 	s.ID = val
+}
+
+// SetTitle sets the value of Title.
+func (s *Todo) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetIsCompleted sets the value of IsCompleted.
+func (s *Todo) SetIsCompleted(val OptBool) {
+	s.IsCompleted = val
 }
 
 func (*Todo) getTodoByIdRes() {}

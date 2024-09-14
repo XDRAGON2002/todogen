@@ -32,6 +32,12 @@ type Handler interface {
 	//
 	// GET /todos
 	GetTodos(ctx context.Context) ([]Todo, error)
+	// UpdateTodoById implements updateTodoById operation.
+	//
+	// Updates a single todo.
+	//
+	// PUT /todos/{todoId}
+	UpdateTodoById(ctx context.Context, req *Todo, params UpdateTodoByIdParams) (*Todo, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and
