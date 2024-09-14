@@ -1,4 +1,4 @@
-module example.com/todogo
+module example.com/todogen
 
 go 1.22.6
 

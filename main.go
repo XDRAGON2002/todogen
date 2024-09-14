@@ -9,8 +9,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"example.com/todogo/internal/api"
-	"example.com/todogo/internal/db"
+	"example.com/todogen/internal/api"
+	"example.com/todogen/internal/db"
 )
 
 type todosService struct {
