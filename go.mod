@@ -5,6 +5,7 @@ go 1.22.6
 require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
+	github.com/mattn/go-sqlite3 v1.14.23
 	github.com/ogen-go/ogen v1.4.1
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/metric v1.30.0

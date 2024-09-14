@@ -2,72 +2,78 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
 
-	api "example.com/todogo/internal/api"
+	_ "github.com/mattn/go-sqlite3"
+
+	"example.com/todogo/internal/api"
+	"example.com/todogo/internal/db"
 )
 
 type todosService struct {
-	todos []api.Todo
-	id    int64
-	mux   sync.Mutex
+	queries *db.Queries
 }
 
 func (t *todosService) GetTodos(ctx context.Context) ([]api.Todo, error) {
-	t.mux.Lock()
-	defer t.mux.Unlock()
+	items, err := t.queries.GetTodos(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
-	return t.todos, nil
+	var todos []api.Todo
+	for _, item := range items {
+		todos = append(todos, api.Todo{
+			ID: api.NewOptInt(int(item)),
+		})
+	}
+
+	return todos, nil
 }
 
 func (t *todosService) GetTodoById(ctx context.Context, params api.GetTodoByIdParams) (api.GetTodoByIdRes, error) {
-	t.mux.Lock()
-	defer t.mux.Unlock()
-
-	for _, todo := range t.todos {
-		if val, ok := todo.ID.Get(); ok && val == int(params.TodoId) {
-			return &todo, nil
-		}
+	item, err := t.queries.GetTodoById(context.Background(), params.TodoId)
+	if err != nil {
+		return nil, err
 	}
-	return &api.GetTodoByIdNotFound{}, nil
+
+	return &api.Todo{
+		ID: api.NewOptInt(int(item)),
+	}, nil
 }
 
 func (t *todosService) AddTodo(ctx context.Context, req *api.Todo) (*api.Todo, error) {
-	t.mux.Lock()
-	defer t.mux.Unlock()
+	item, err := t.queries.AddTodo(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
-	todo := req
-	todo.ID.SetTo(int(t.id))
-	t.id++
-	t.todos = append(t.todos, *todo)
-
-	return todo, nil
+	return &api.Todo{
+		ID: api.NewOptInt(int(item)),
+	}, nil
 }
 
 func (t *todosService) DeleteTodoById(ctx context.Context, params api.DeleteTodoByIdParams) error {
-	t.mux.Lock()
-	defer t.mux.Unlock()
-
-	idxToDelete := -1
-	for idx, todo := range t.todos {
-		if val, ok := todo.ID.Get(); ok && val == int(params.TodoId) {
-			idxToDelete = idx
-			break
-		}
+	err := t.queries.DeleteTodoById(context.Background(), params.TodoId)
+	if err != nil {
+		return err
 	}
-
-	if idxToDelete != -1 {
-		t.todos = append(t.todos[:idxToDelete], t.todos[idxToDelete+1:]...)
-	}
-
 	return nil
 }
 
 func main() {
-	service := &todosService{}
+	dbCtx, err := sql.Open("sqlite3", "todos.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	queries := db.New(dbCtx)
+
+	service := &todosService{
+		queries: queries,
+	}
 
 	srv, err := api.NewServer(service)
 	if err != nil {
