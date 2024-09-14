@@ -1,0 +1,94 @@
+openapi: 3.0.2
+servers:
+  - url: /v1
+info:
+  version: 1.0.0
+  title: Todo list schema
+tags:
+  - name: todo
+    description: Everything about your Todos
+paths:
+  /todos:
+    get:
+      tags:
+        - todo
+      summary: Get all todos
+      description: Returns all todos
+      operationId: getTodos
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+    post:
+      tags:
+        - todo
+      summary: Add a new todo to the list
+      description: Add a new todo to the list
+      operationId: addTodo
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+      requestBody:
+        description: Create a new todo in the list
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Todo'
+  '/todos/{todoId}':
+    get:
+      tags:
+        - todo
+      summary: Get todo by ID
+      description: Returns a single todo
+      operationId: getTodoById
+      parameters:
+        - name: todoId
+          in: path
+          description: ID of todo to return
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          description: Todo not found
+    delete:
+      tags:
+        - todo
+      summary: Delete todo by ID
+      description: Deletes a single todo
+      operationId: deleteTodoById
+      parameters:
+        - name: todoId
+          in: path
+          description: ID of todo to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+components:
+  schemas:
+    Todo:
+      type: object
+      properties:
+        id:
+          type: integer
